@@ -1,0 +1,27 @@
+def bgen_samples_path(wc):
+    n_samples = bgen_contigs.loc[wc.bgen_contig]['n_consent_samples']
+    return [f"raw-data/gt-imputation/ukb59384_imp_chr{wc.bgen_contig}_v3_s{n_samples}.sample"]
+
+rule bgen_to_zarr:
+    input:
+        bgen_path="raw-data/gt-imputation/ukb_imp_chr{bgen_contig}_v3.bgen",
+        variants_path="raw-data/gt-imputation/ukb_mfi_chr{bgen_contig}_v3.txt",
+        samples_path=bgen_samples_path
+    output:
+        directory("prep-data/gt-imputation/ukb_chr{bgen_contig}.zarr")
+    params:
+        contig_index=lambda wc: bgen_contigs.loc[str(wc.bgen_contig)]['index']
+    conda:
+        "envs/gwas.yaml"
+    log:
+        "logs/bgen_to_zarr.{bgen_contig}.txt"
+    shell:
+        # This will write to the local {output} path
+        "python scripts/convert.py bgen_to_zarr "
+        "--input-path-bgen={input.bgen_path} "
+        "--input-path-variants={input.variants_path} "
+        "--input-path-samples={input.samples_path} "
+        "--output-path={output} "
+        "--contig-name={wildcards.bgen_contig} "
+        "--contig-index={params.contig_index} "
+        "--remote=False 2> {log} "
